@@ -1,4 +1,23 @@
 use core::future::Future;
+use drogue_ajour_protocol::{CommandRef, StatusRef};
+
+/// Trait for the firmware update service.
+///
+/// The service is responsible for establishing the connection to the firmware update
+/// service and performing the request-response cycle with the update service.
+pub trait UpdateService {
+    /// Error type
+    type Error;
+
+    /// Future returned by send
+    type RequestFuture<'m>: Future<Output = Result<CommandRef<'m>, Self::Error>> + 'm
+    where
+        Self: 'm;
+
+    /// Send the status to the server, and return the Command responded by the service
+    /// rx buffer.
+    fn request<'m>(&'m mut self, status: &'m StatusRef<'m>) -> Self::RequestFuture<'m>;
+}
 
 /// The current status of the firmware on a device
 pub struct Status<'m> {

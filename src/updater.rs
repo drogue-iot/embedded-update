@@ -1,42 +1,23 @@
-use crate::traits::FirmwareDevice;
-use core::future::Future;
+use crate::traits::{FirmwareDevice, UpdateService};
 use drogue_ajour_protocol::{CommandRef, StatusRef};
 use embedded_hal_async::delay::DelayUs;
 use heapless::Vec;
 
-/// Trait for the underlying transport (CoAP, HTTP, MQTT or LoRaWAN)
-pub trait Transport {
-    /// Error type
-    type Error;
-
-    /// Future returned by send
-    type RequestFuture<'m>: Future<Output = Result<usize, Self::Error>> + 'm
-    where
-        Self: 'm;
-    /// Send payload to server.
-    fn request<'m>(&'m mut self, tx: &'m [u8], rx: &'m mut [u8]) -> Self::RequestFuture<'m>;
-}
-
-pub struct FirmwareUpdater<T>
-where
-    T: Transport,
-{
-    transport: T,
-}
-
+/// The error types that the updater may return during the update process.
+#[derive(Debug)]
 pub enum Error {
     Encode,
     Decode,
     Device,
-    Transport,
+    Service,
 }
 
+/// The device status as determined after running the updater.
+#[derive(PartialEq, Debug)]
 pub enum DeviceStatus {
     Synced,
     Updated,
 }
-
-const MAX_OVERHEAD: usize = 42;
 
 struct UpdaterState {
     current_version: Vec<u8, 32>,
@@ -44,41 +25,29 @@ struct UpdaterState {
     next_version: Option<Vec<u8, 32>>,
 }
 
+/// The updater process that uses the update service to perform a firmware update check
+/// for a device. If the device needs to be updated, the updater will follow the update protocol
+pub struct FirmwareUpdater<T>
+where
+    T: UpdateService,
+{
+    service: T,
+}
+
 impl<T> FirmwareUpdater<T>
 where
-    T: Transport,
+    T: UpdateService,
 {
-    pub fn new(transport: T) -> Self {
-        Self { transport }
-    }
-
-    async fn report<'m>(
-        &mut self,
-        status: &StatusRef<'_>,
-        rx: &'m mut [u8],
-    ) -> Result<CommandRef<'m>, Error> {
-        let payload = serde_cbor::to_vec(&status).map_err(|_| Error::Encode)?;
-        let result = self.transport.request(&payload, rx).await;
-        match result {
-            Ok(len) => {
-                if let Ok(cmd) = serde_cbor::from_slice::<CommandRef>(&rx[..len]) {
-                    Ok(cmd)
-                } else {
-                    Err(Error::Decode)
-                }
-            }
-            Err(_) => Err(Error::Transport),
-        }
+    /// Create a new instance of the updater with the provided service instance.
+    pub fn new(service: T) -> Self {
+        Self { service }
     }
 
     async fn check<F: FirmwareDevice, D: DelayUs>(
         &mut self,
         device: &mut F,
         delay: &mut D,
-    ) -> Result<bool, Error>
-    where
-        [(); F::MTU + MAX_OVERHEAD]:,
-    {
+    ) -> Result<bool, Error> {
         let mut state = {
             let initial = device.status().await.map_err(|_| Error::Device)?;
             UpdaterState {
@@ -93,10 +62,9 @@ where
             }
         };
 
-        let mut rx_buf = [0; { F::MTU + MAX_OVERHEAD }];
-
         #[allow(unused_mut)]
         #[allow(unused_assignments)]
+        #[allow(mutable_borrow_reservation_conflict)]
         loop {
             let status = if let Some(next) = &state.next_version {
                 StatusRef::update(
@@ -110,7 +78,11 @@ where
                 StatusRef::first(&state.current_version, Some(F::MTU as u32), None)
             };
 
-            let cmd = self.report(&status, &mut rx_buf).await?;
+            let cmd = self
+                .service
+                .request(&status)
+                .await
+                .map_err(|_| Error::Service)?;
             match cmd {
                 CommandRef::Write {
                     version,
@@ -180,15 +152,70 @@ where
         &mut self,
         device: &mut F,
         delay: &mut D,
-    ) -> Result<DeviceStatus, Error>
-    where
-        [(); F::MTU + MAX_OVERHEAD]:,
-    {
+    ) -> Result<DeviceStatus, Error> {
         if self.check(device, delay).await? {
             Ok(DeviceStatus::Synced)
         } else {
-            // Reset device
             Ok(DeviceStatus::Updated)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::convert::Infallible;
+    use core::future::Future;
+
+    use crate::DeviceStatus;
+    use crate::FirmwareUpdater;
+    use crate::InMemory;
+    use crate::Simulator;
+
+    pub struct TokioDelay;
+
+    impl embedded_hal_async::delay::DelayUs for TokioDelay {
+        type Error = Infallible;
+
+        type DelayUsFuture<'a> = impl Future<Output = Result<(), Self::Error>>
+        where
+            Self: 'a;
+
+        fn delay_us(&mut self, us: u32) -> Self::DelayUsFuture<'_> {
+            async move {
+                tokio::time::sleep(tokio::time::Duration::from_micros(us as u64)).await;
+                Ok(())
+            }
+        }
+
+        type DelayMsFuture<'a> = impl Future<Output = Result<(), Self::Error>>
+        where
+            Self: 'a;
+
+        fn delay_ms(&mut self, ms: u32) -> Self::DelayMsFuture<'_> {
+            async move {
+                tokio::time::sleep(tokio::time::Duration::from_millis(ms as u64)).await;
+                Ok(())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_protocol_synced() {
+        let service = InMemory::new(b"1", &[1; 1024]);
+        let mut device = Simulator::new(b"1");
+
+        let mut updater = FirmwareUpdater::new(service);
+        let status = updater.run(&mut device, &mut TokioDelay).await.unwrap();
+        assert_eq!(status, DeviceStatus::Synced);
+    }
+
+    #[tokio::test]
+    async fn test_update_protocol_updated() {
+        let service = InMemory::new(b"2", &[1; 1024]);
+        let mut device = Simulator::new(b"1");
+
+        let mut updater = FirmwareUpdater::new(service);
+        let status = updater.run(&mut device, &mut TokioDelay).await.unwrap();
+        assert_eq!(status, DeviceStatus::Updated);
     }
 }

@@ -11,3 +11,6 @@ drogue-ajour-protocol = "0.4.0"
 serde_cbor = "0.11"
 embedded-io = "0.3.0"
 heapless = "0.7"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
