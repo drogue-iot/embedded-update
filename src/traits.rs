@@ -5,13 +5,13 @@ pub struct Status<'m> {
     /// Current firmware version
     pub current_version: &'m [u8],
     /// Offset written of next firmware
-    pub next_offset: usize,
+    pub next_offset: u32,
     /// Next version being written
     pub next_version: Option<&'m [u8]>,
 }
 
 pub trait FirmwareDevice {
-    const MTU: u32;
+    const MTU: usize;
     type Error;
 
     // Future returned by status
@@ -48,7 +48,4 @@ pub trait FirmwareDevice {
         Self: 'm;
     /// Mark firmware as being in sync with the expected
     fn synced<'m>(&'m mut self) -> Self::SyncedFuture<'m>;
-
-    /// Reset the device.
-    fn reset(&mut self) -> !;
 }
