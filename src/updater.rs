@@ -98,7 +98,7 @@ where
                         device.start(version).await.map_err(|_| Error::Device)?;
                     }
                     device
-                        .write(offset, &data)
+                        .write(offset, data)
                         .await
                         .map_err(|_| Error::Device)?;
                     state.next_offset += data.len() as u32;
@@ -134,7 +134,7 @@ where
                 } => {
                     debug!("Swaping firmware");
                     device
-                        .update(&version, checksum)
+                        .update(version, checksum)
                         .await
                         .map_err(|_| Error::Device)?;
                     return Ok(false);

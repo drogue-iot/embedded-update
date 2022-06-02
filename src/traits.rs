@@ -38,7 +38,7 @@ pub trait FirmwareDevice {
     where
         Self: 'm;
     /// Return the status of the currently running firmware.
-    fn status<'m>(&'m mut self) -> Self::StatusFuture<'m>;
+    fn status(&mut self) -> Self::StatusFuture<'_>;
 
     // Future returned by start
     type StartFuture<'m>: Future<Output = Result<(), Self::Error>> + 'm
@@ -66,5 +66,5 @@ pub trait FirmwareDevice {
     where
         Self: 'm;
     /// Mark firmware as being in sync with the expected
-    fn synced<'m>(&'m mut self) -> Self::SyncedFuture<'m>;
+    fn synced(&mut self) -> Self::SyncedFuture<'_>;
 }

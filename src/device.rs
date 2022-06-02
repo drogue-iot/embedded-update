@@ -23,7 +23,7 @@ impl FirmwareDevice for Simulator {
     type StatusFuture<'m> = impl Future<Output = Result<Status<'m>, Self::Error>> + 'm
     where
         Self: 'm;
-    fn status<'m>(&'m mut self) -> Self::StatusFuture<'m> {
+    fn status(&mut self) -> Self::StatusFuture<'_> {
         async move {
             Ok(Status {
                 current_version: &self.version,
@@ -60,7 +60,7 @@ impl FirmwareDevice for Simulator {
     type SyncedFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm
     where
         Self: 'm;
-    fn synced<'m>(&'m mut self) -> Self::SyncedFuture<'m> {
+    fn synced(&mut self) -> Self::SyncedFuture<'_> {
         async move { Ok(()) }
     }
 }
