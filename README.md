@@ -1,4 +1,5 @@
-# Firmware Updates for Embedded
+# `firmware-updater` Firmware updater for embedded devices
+
 [![CI](https://github.com/drogue-iot/firmware-updater/actions/workflows/ci.yaml/badge.svg)](https://github.com/drogue-iot/firmware-updater/actions/workflows/ci.yaml)
 [![crates.io](https://img.shields.io/crates/v/firmware-updater.svg)](https://crates.io/crates/firmware-updater)
 [![docs.rs](https://docs.rs/firmware-updater/badge.svg)](https://docs.rs/firmware-updater)
