@@ -1,5 +1,5 @@
 use core::future::Future;
-use drogue_ajour_protocol::{CommandRef, StatusRef};
+use drogue_ajour_protocol::{Command, Status};
 
 /// Trait for the firmware update service.
 ///
@@ -10,17 +10,17 @@ pub trait UpdateService {
     type Error;
 
     /// Future returned by send
-    type RequestFuture<'m>: Future<Output = Result<CommandRef<'m>, Self::Error>> + 'm
+    type RequestFuture<'m>: Future<Output = Result<Command<'m>, Self::Error>> + 'm
     where
         Self: 'm;
 
     /// Send the status to the server, and return the Command responded by the service
     /// rx buffer.
-    fn request<'m>(&'m mut self, status: &'m StatusRef<'m>) -> Self::RequestFuture<'m>;
+    fn request<'m>(&'m mut self, status: &'m Status<'m>) -> Self::RequestFuture<'m>;
 }
 
 /// The current status of the firmware on a device
-pub struct Status<'m> {
+pub struct FirmwareStatus<'m> {
     /// Current firmware version
     pub current_version: &'m [u8],
     /// Offset written of next firmware
@@ -34,7 +34,7 @@ pub trait FirmwareDevice {
     type Error;
 
     // Future returned by status
-    type StatusFuture<'m>: Future<Output = Result<Status<'m>, Self::Error>> + 'm
+    type StatusFuture<'m>: Future<Output = Result<FirmwareStatus<'m>, Self::Error>> + 'm
     where
         Self: 'm;
     /// Return the status of the currently running firmware.
@@ -59,7 +59,7 @@ pub trait FirmwareDevice {
     where
         Self: 'm;
     /// Finish the firmware write and mark device to be updated
-    fn update<'m>(&'m mut self, version: &'m [u8], checksum: [u8; 32]) -> Self::UpdateFuture<'m>;
+    fn update<'m>(&'m mut self, version: &'m [u8], checksum: &'m [u8]) -> Self::UpdateFuture<'m>;
 
     /// Future returned by synced
     type SyncedFuture<'m>: Future<Output = Result<(), Self::Error>> + 'm

@@ -1,5 +1,5 @@
 use crate::traits::{FirmwareDevice, UpdateService};
-use drogue_ajour_protocol::{CommandRef, StatusRef};
+use drogue_ajour_protocol::{Command, Status};
 use embedded_hal_async::delay::DelayUs;
 use heapless::Vec;
 
@@ -64,10 +64,11 @@ where
 
         #[allow(unused_mut)]
         #[allow(unused_assignments)]
+        #[allow(renamed_and_removed_lints)]
         #[allow(mutable_borrow_reservation_conflict)]
         loop {
             let status = if let Some(next) = &state.next_version {
-                StatusRef::update(
+                Status::update(
                     &state.current_version,
                     Some(F::MTU as u32),
                     state.next_offset,
@@ -75,7 +76,7 @@ where
                     None,
                 )
             } else {
-                StatusRef::first(&state.current_version, Some(F::MTU as u32), None)
+                Status::first(&state.current_version, Some(F::MTU as u32), None)
             };
 
             let cmd = self
@@ -84,7 +85,7 @@ where
                 .await
                 .map_err(|_| Error::Service)?;
             match cmd {
-                CommandRef::Write {
+                Command::Write {
                     version,
                     offset,
                     data,
@@ -93,20 +94,24 @@ where
                     if offset == 0 {
                         debug!(
                             "Updating device firmware from {} to {}",
-                            state.current_version, version
+                            state.current_version,
+                            version.as_ref()
                         );
-                        device.start(version).await.map_err(|_| Error::Device)?;
+                        device
+                            .start(version.as_ref())
+                            .await
+                            .map_err(|_| Error::Device)?;
                     }
                     device
-                        .write(offset, data)
+                        .write(offset, data.as_ref())
                         .await
                         .map_err(|_| Error::Device)?;
                     state.next_offset += data.len() as u32;
                     state
                         .next_version
-                        .replace(Vec::from_slice(version).map_err(|_| Error::Decode)?);
+                        .replace(Vec::from_slice(version.as_ref()).map_err(|_| Error::Decode)?);
                 }
-                CommandRef::Sync {
+                Command::Sync {
                     version: _,
                     poll: _,
                     correlation_id: _,
@@ -115,7 +120,7 @@ where
                     device.synced().await.map_err(|_| Error::Device)?;
                     return Ok(true);
                 }
-                CommandRef::Wait {
+                Command::Wait {
                     poll,
                     correlation_id: _,
                 } => {
@@ -127,14 +132,14 @@ where
                             .map_err(|_| Error::Device)?;
                     }
                 }
-                CommandRef::Swap {
+                Command::Swap {
                     version,
                     checksum,
                     correlation_id: _,
                 } => {
                     debug!("Swaping firmware");
                     device
-                        .update(version, checksum)
+                        .update(version.as_ref(), checksum.as_ref())
                         .await
                         .map_err(|_| Error::Device)?;
                     return Ok(false);
