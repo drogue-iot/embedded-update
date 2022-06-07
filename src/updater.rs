@@ -1,7 +1,10 @@
-use crate::traits::{FirmwareVersion, FirmwareDevice, UpdateService};
+use crate::traits::{FirmwareDevice, FirmwareVersion, UpdateService};
 use drogue_ajour_protocol::{Command, Status};
 use embedded_hal_async::delay::DelayUs;
-use futures::future::{select, Either};
+use futures::{
+    future::{select, Either},
+    pin_mut,
+};
 
 /// The error types that the updater may return during the update process.
 #[derive(Debug)]
@@ -22,7 +25,11 @@ pub enum DeviceStatus {
     Updated,
 }
 
-struct UpdaterState<F> where F: FirmwareVersion {
+#[derive(Clone)]
+struct UpdaterState<F>
+where
+    F: FirmwareVersion,
+{
     current_version: F,
     next_offset: u32,
     next_version: Option<F>,
@@ -79,78 +86,89 @@ where
 
             debug!("Sending status: {:?}", status);
 
-            let delay_fut = delay.delay_ms(15_000);
-            let cmd_fut = self.service.request(&status);
-            match select(delay_fut, cmd_fut).await {
-                Either::Right((_, cmd)) => match cmd {
-                Ok(Command::Write {
-                    version,
-                    offset,
-                    data,
-                    correlation_id: _,
-                }) => {
-                    if offset == 0 {
-                        debug!(
-                            "Updating device firmware from {} to {}",
-                            state.current_version,
-                            version.as_ref()
-                        );
-                        device
-                            .start(version.as_ref())
-                            .await
-                            .map_err(|e| Error::Device(e))?;
-                    }
-                    device
-                        .write(offset, data.as_ref())
-                        .await
-                        .map_err(|e| Error::Device(e))?;
-                    state.next_offset += data.len() as u32;
-                    state
-                        .next_version
-                        .replace(F::Version::from_slice(version.as_ref()).map_err(|_| Error::Decode)?);
-                }
-                Ok(Command::Sync {
-                    version: _,
-                    poll: _,
-                    correlation_id: _,
-                }) => {
-                    debug!("Device firmware is up to date");
-                    device.synced().await.map_err(|e| Error::Device(e))?;
-                    return Ok(true);
-                }
-                Ok(Command::Wait {
-                    poll,
-                    correlation_id: _,
-                }) => {
-                    debug!("Instruction to wait for {:?} seconds", poll);
-                    if let Some(poll) = poll {
-                        delay
-                            .delay_ms(poll * 1000)
-                            .await
-                            .map_err(|_| Error::Delay)?;
-                    }
-                }
-                Ok(Command::Swap {
-                    version,
-                    checksum,
-                    correlation_id: _,
-                }) => {
-                    debug!("Swaping firmware");
-                    device
-                        .update(version.as_ref(), checksum.as_ref())
-                        .await
-                        .map_err(|e| Error::Device(e))?;
-                    return Ok(false);
-                }
-                Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    debug!("Error reporting status: {:?}", defmt::Debug2Format(&e));
-                    #[cfg(not(feature = "defmt"))]
-                    debug!("Error reporting status: {:?}", e);
+            let mut next_state = state.clone();
+            let mut poll_opt = None;
+            {
+                let delay_fut = delay.delay_ms(15_000);
+                let cmd_fut = self.service.request(&status);
+                pin_mut!(delay_fut);
+                pin_mut!(cmd_fut);
+                match select(delay_fut, cmd_fut).await {
+                    Either::Right((cmd, _)) => match cmd {
+                        Ok(Command::Write {
+                            version,
+                            offset,
+                            data,
+                            correlation_id: _,
+                        }) => {
+                            if offset == 0 {
+                                debug!(
+                                    "Updating device firmware from {} to {}",
+                                    state.current_version,
+                                    version.as_ref()
+                                );
+                                device
+                                    .start(version.as_ref())
+                                    .await
+                                    .map_err(|e| Error::Device(e))?;
+                            }
+                            device
+                                .write(offset, data.as_ref())
+                                .await
+                                .map_err(|e| Error::Device(e))?;
+
+                            next_state.next_offset += data.len() as u32;
+                            next_state.next_version.replace(
+                                F::Version::from_slice(version.as_ref())
+                                    .map_err(|_| Error::Decode)?,
+                            );
+                        }
+                        Ok(Command::Sync {
+                            version: _,
+                            poll,
+                            correlation_id: _,
+                        }) => {
+                            debug!("Device firmware is up to date");
+                            device.synced().await.map_err(|e| Error::Device(e))?;
+                            poll_opt = poll;
+                            return Ok(true);
+                        }
+                        Ok(Command::Wait {
+                            poll,
+                            correlation_id: _,
+                        }) => {
+                            debug!("Instruction to wait for {:?} seconds", poll);
+                            poll_opt = poll;
+                        }
+                        Ok(Command::Swap {
+                            version,
+                            checksum,
+                            correlation_id: _,
+                        }) => {
+                            debug!("Swaping firmware");
+                            device
+                                .update(version.as_ref(), checksum.as_ref())
+                                .await
+                                .map_err(|e| Error::Device(e))?;
+                            return Ok(false);
+                        }
+                        Err(e) => {
+                            #[cfg(feature = "defmt")]
+                            debug!("Error reporting status: {:?}", defmt::Debug2Format(&e));
+                            #[cfg(not(feature = "defmt"))]
+                            debug!("Error reporting status: {:?}", e);
+                        }
+                    },
+                    _ => {}
                 }
             }
-            _ => {}
-        }
+            state = next_state;
+            if let Some(poll) = poll_opt {
+                delay
+                    .delay_ms(poll * 1000)
+                    .await
+                    .map_err(|_| Error::Delay)?;
+            }
         }
     }
 
