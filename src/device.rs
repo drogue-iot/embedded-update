@@ -25,6 +25,7 @@ impl FirmwareDevice for Simulator {
         Self: 'm;
     fn status(&mut self) -> Self::StatusFuture<'_> {
         async move {
+            debug!("Simulator::status()");
             Ok(FirmwareStatus {
                 current_version: &self.version,
                 next_offset: 0,
@@ -37,14 +38,20 @@ impl FirmwareDevice for Simulator {
     where
         Self: 'm;
     fn start<'m>(&'m mut self, _: &'m [u8]) -> Self::StartFuture<'m> {
-        async move { Ok(()) }
+        async move {
+            debug!("Simulator::start()");
+            Ok(())
+        }
     }
 
     type WriteFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm
     where
         Self: 'm;
     fn write<'m>(&'m mut self, _: u32, _: &'m [u8]) -> Self::WriteFuture<'m> {
-        async move { Ok(()) }
+        async move {
+            debug!("Simulator::write()");
+            Ok(())
+        }
     }
 
     type UpdateFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm
@@ -52,6 +59,7 @@ impl FirmwareDevice for Simulator {
         Self: 'm;
     fn update<'m>(&'m mut self, version: &'m [u8], _: &'m [u8]) -> Self::UpdateFuture<'m> {
         async move {
+            debug!("Simulator::update()");
             self.version = Vec::from_slice(version).unwrap();
             Ok(())
         }
@@ -61,6 +69,9 @@ impl FirmwareDevice for Simulator {
     where
         Self: 'm;
     fn synced(&mut self) -> Self::SyncedFuture<'_> {
-        async move { Ok(()) }
+        async move {
+            debug!("Simulator::synced()");
+            Ok(())
+        }
     }
 }

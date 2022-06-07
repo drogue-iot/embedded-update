@@ -7,7 +7,7 @@ use drogue_ajour_protocol::{Command, Status};
 /// service and performing the request-response cycle with the update service.
 pub trait UpdateService {
     /// Error type
-    type Error;
+    type Error: core::fmt::Debug;
 
     /// Future returned by send
     type RequestFuture<'m>: Future<Output = Result<Command<'m>, Self::Error>> + 'm

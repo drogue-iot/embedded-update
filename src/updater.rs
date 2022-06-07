@@ -5,15 +5,18 @@ use heapless::Vec;
 
 /// The error types that the updater may return during the update process.
 #[derive(Debug)]
-pub enum Error {
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Error<D, S> {
     Encode,
     Decode,
-    Device,
-    Service,
+    Delay,
+    Device(D),
+    Service(S),
 }
 
 /// The device status as determined after running the updater.
 #[derive(PartialEq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum DeviceStatus {
     Synced,
     Updated,
@@ -47,9 +50,9 @@ where
         &mut self,
         device: &mut F,
         delay: &mut D,
-    ) -> Result<bool, Error> {
+    ) -> Result<bool, Error<F::Error, T::Error>> {
         let mut state = {
-            let initial = device.status().await.map_err(|_| Error::Device)?;
+            let initial = device.status().await.map_err(|e| Error::Device(e))?;
             UpdaterState {
                 current_version: Vec::from_slice(initial.current_version)
                     .map_err(|_| Error::Encode)?,
@@ -79,11 +82,13 @@ where
                 Status::first(&state.current_version, Some(F::MTU as u32), None)
             };
 
+            debug!("Sending status: {:?}", status);
+
             let cmd = self
                 .service
                 .request(&status)
                 .await
-                .map_err(|_| Error::Service)?;
+                .map_err(|e| Error::Service(e))?;
             match cmd {
                 Command::Write {
                     version,
@@ -100,12 +105,12 @@ where
                         device
                             .start(version.as_ref())
                             .await
-                            .map_err(|_| Error::Device)?;
+                            .map_err(|e| Error::Device(e))?;
                     }
                     device
                         .write(offset, data.as_ref())
                         .await
-                        .map_err(|_| Error::Device)?;
+                        .map_err(|e| Error::Device(e))?;
                     state.next_offset += data.len() as u32;
                     state
                         .next_version
@@ -117,7 +122,7 @@ where
                     correlation_id: _,
                 } => {
                     debug!("Device firmware is up to date");
-                    device.synced().await.map_err(|_| Error::Device)?;
+                    device.synced().await.map_err(|e| Error::Device(e))?;
                     return Ok(true);
                 }
                 Command::Wait {
@@ -129,7 +134,7 @@ where
                         delay
                             .delay_ms(poll * 1000)
                             .await
-                            .map_err(|_| Error::Device)?;
+                            .map_err(|_| Error::Delay)?;
                     }
                 }
                 Command::Swap {
@@ -141,7 +146,7 @@ where
                     device
                         .update(version.as_ref(), checksum.as_ref())
                         .await
-                        .map_err(|_| Error::Device)?;
+                        .map_err(|e| Error::Device(e))?;
                     return Ok(false);
                 }
             }
@@ -157,7 +162,7 @@ where
         &mut self,
         device: &mut F,
         delay: &mut D,
-    ) -> Result<DeviceStatus, Error> {
+    ) -> Result<DeviceStatus, Error<F::Error, T::Error>> {
         if self.check(device, delay).await? {
             Ok(DeviceStatus::Synced)
         } else {
