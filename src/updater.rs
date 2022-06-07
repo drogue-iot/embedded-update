@@ -1,7 +1,7 @@
-use crate::traits::{FirmwareDevice, UpdateService};
+use crate::traits::{FirmwareVersion, FirmwareDevice, UpdateService};
 use drogue_ajour_protocol::{Command, Status};
 use embedded_hal_async::delay::DelayUs;
-use heapless::Vec;
+use futures::future::{select, Either};
 
 /// The error types that the updater may return during the update process.
 #[derive(Debug)]
@@ -22,10 +22,10 @@ pub enum DeviceStatus {
     Updated,
 }
 
-struct UpdaterState {
-    current_version: Vec<u8, 32>,
+struct UpdaterState<F> where F: FirmwareVersion {
+    current_version: F,
     next_offset: u32,
-    next_version: Option<Vec<u8, 32>>,
+    next_version: Option<F>,
 }
 
 /// The updater process that uses the update service to perform a firmware update check
@@ -54,14 +54,9 @@ where
         let mut state = {
             let initial = device.status().await.map_err(|e| Error::Device(e))?;
             UpdaterState {
-                current_version: Vec::from_slice(initial.current_version)
-                    .map_err(|_| Error::Encode)?,
+                current_version: initial.current_version,
                 next_offset: initial.next_offset,
-                next_version: if let Some(next_version) = &initial.next_version {
-                    Some(Vec::from_slice(next_version).map_err(|_| Error::Encode)?)
-                } else {
-                    None
-                },
+                next_version: initial.next_version,
             }
         };
 
@@ -72,23 +67,22 @@ where
         loop {
             let status = if let Some(next) = &state.next_version {
                 Status::update(
-                    &state.current_version,
+                    state.current_version.as_ref(),
                     Some(F::MTU as u32),
                     state.next_offset,
-                    next,
+                    next.as_ref(),
                     None,
                 )
             } else {
-                Status::first(&state.current_version, Some(F::MTU as u32), None)
+                Status::first(state.current_version.as_ref(), Some(F::MTU as u32), None)
             };
 
             debug!("Sending status: {:?}", status);
 
-            let cmd = self
-                .service
-                .request(&status)
-                .await;
-            match cmd {
+            let delay_fut = delay.delay_ms(15_000);
+            let cmd_fut = self.service.request(&status);
+            match select(delay_fut, cmd_fut).await {
+                Either::Right((_, cmd)) => match cmd {
                 Ok(Command::Write {
                     version,
                     offset,
@@ -113,7 +107,7 @@ where
                     state.next_offset += data.len() as u32;
                     state
                         .next_version
-                        .replace(Vec::from_slice(version.as_ref()).map_err(|_| Error::Decode)?);
+                        .replace(F::Version::from_slice(version.as_ref()).map_err(|_| Error::Decode)?);
                 }
                 Ok(Command::Sync {
                     version: _,
@@ -155,6 +149,8 @@ where
                     debug!("Error reporting status: {:?}", e);
                 }
             }
+            _ => {}
+        }
         }
     }
 

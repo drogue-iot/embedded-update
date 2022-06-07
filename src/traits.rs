@@ -1,3 +1,4 @@
+use core::fmt::Debug;
 use core::future::Future;
 use drogue_ajour_protocol::{Command, Status};
 
@@ -19,22 +20,43 @@ pub trait UpdateService {
     fn request<'m>(&'m mut self, status: &'m Status<'m>) -> Self::RequestFuture<'m>;
 }
 
+/// Type representing the firmware version
+#[cfg(feature = "defmt")]
+pub trait FirmwareVersion: PartialEq + AsRef<[u8]> + Sized + Debug + Clone + defmt::Format {
+    fn from_slice(data: &[u8]) -> Result<Self, ()>;
+}
+
+#[cfg(not(feature = "defmt"))]
+pub trait FirmwareVersion: PartialEq + AsRef<[u8]> + Sized + Debug + Clone {
+    fn from_slice(data: &[u8]) -> Result<Self, ()>;
+}
+
+impl<const N: usize> FirmwareVersion for heapless::Vec<u8, N> {
+    fn from_slice(data: &[u8]) -> Result<Self, ()> {
+        heapless::Vec::from_slice(data)
+    }
+}
+
 /// The current status of the firmware on a device
-pub struct FirmwareStatus<'m> {
+pub struct FirmwareStatus<VERSION>
+where
+    VERSION: FirmwareVersion,
+{
     /// Current firmware version
-    pub current_version: &'m [u8],
+    pub current_version: VERSION,
     /// Offset written of next firmware
     pub next_offset: u32,
     /// Next version being written
-    pub next_version: Option<&'m [u8]>,
+    pub next_version: Option<VERSION>,
 }
 
 pub trait FirmwareDevice {
     const MTU: usize;
+    type Version: FirmwareVersion;
     type Error;
 
     // Future returned by status
-    type StatusFuture<'m>: Future<Output = Result<FirmwareStatus<'m>, Self::Error>> + 'm
+    type StatusFuture<'m>: Future<Output = Result<FirmwareStatus<Self::Version>, Self::Error>> + 'm
     where
         Self: 'm;
     /// Return the status of the currently running firmware.

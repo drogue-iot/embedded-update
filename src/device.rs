@@ -18,16 +18,17 @@ impl Simulator {
 
 impl FirmwareDevice for Simulator {
     const MTU: usize = 256;
+    type Version = Vec<u8, 16>;
     type Error = Infallible;
 
-    type StatusFuture<'m> = impl Future<Output = Result<FirmwareStatus<'m>, Self::Error>> + 'm
+    type StatusFuture<'m> = impl Future<Output = Result<FirmwareStatus<Self::Version>, Self::Error>> + 'm
     where
         Self: 'm;
     fn status(&mut self) -> Self::StatusFuture<'_> {
         async move {
             debug!("Simulator::status()");
             Ok(FirmwareStatus {
-                current_version: &self.version,
+                current_version: self.version.clone(),
                 next_offset: 0,
                 next_version: None,
             })
