@@ -87,15 +87,14 @@ where
             let cmd = self
                 .service
                 .request(&status)
-                .await
-                .map_err(|e| Error::Service(e))?;
+                .await;
             match cmd {
-                Command::Write {
+                Ok(Command::Write {
                     version,
                     offset,
                     data,
                     correlation_id: _,
-                } => {
+                }) => {
                     if offset == 0 {
                         debug!(
                             "Updating device firmware from {} to {}",
@@ -116,19 +115,19 @@ where
                         .next_version
                         .replace(Vec::from_slice(version.as_ref()).map_err(|_| Error::Decode)?);
                 }
-                Command::Sync {
+                Ok(Command::Sync {
                     version: _,
                     poll: _,
                     correlation_id: _,
-                } => {
+                }) => {
                     debug!("Device firmware is up to date");
                     device.synced().await.map_err(|e| Error::Device(e))?;
                     return Ok(true);
                 }
-                Command::Wait {
+                Ok(Command::Wait {
                     poll,
                     correlation_id: _,
-                } => {
+                }) => {
                     debug!("Instruction to wait for {:?} seconds", poll);
                     if let Some(poll) = poll {
                         delay
@@ -137,17 +136,23 @@ where
                             .map_err(|_| Error::Delay)?;
                     }
                 }
-                Command::Swap {
+                Ok(Command::Swap {
                     version,
                     checksum,
                     correlation_id: _,
-                } => {
+                }) => {
                     debug!("Swaping firmware");
                     device
                         .update(version.as_ref(), checksum.as_ref())
                         .await
                         .map_err(|e| Error::Device(e))?;
                     return Ok(false);
+                }
+                Err(e) => {
+                    #[cfg(feature = "defmt")]
+                    debug!("Error reporting status: {:?}", defmt::Debug2Format(&e));
+                    #[cfg(not(feature = "defmt"))]
+                    debug!("Error reporting status: {:?}", e);
                 }
             }
         }
