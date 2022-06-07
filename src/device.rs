@@ -17,7 +17,7 @@ impl Simulator {
 }
 
 impl FirmwareDevice for Simulator {
-    const MTU: usize = 8;
+    const MTU: usize = 256;
     type Error = Infallible;
 
     type StatusFuture<'m> = impl Future<Output = Result<FirmwareStatus<'m>, Self::Error>> + 'm
