@@ -11,11 +11,11 @@ Both the device to be updated and the update service are pluggable, so the proto
 
 The library provides several update service reference implementations:
 
-* [`Drogue Cloud`](https://github.com/drogue-iot/drogue-ajour) that can be used with the Drogue IoT open source project.
-* An `InMemory` type for testing.
-* [`Eclipse Hawkbit`]()
+* [`Drogue Cloud`](https://github.com/drogue-iot/drogue-ajour) that works with the Drogue IoT open source project.
+* [`Eclipse Hawkbit`](https://www.eclipse.org/hawkbit/) that works with the Eclipse Hawkbit DDI API.
+* `InMemory` for testing.
 
-For device side implementations, these can be found in [`Drogue Device`](https://github.com/drogue-iot/drogue-device), but a `Simulator` device is provided for testing.
+Device side implementations can be found in [`Drogue Device`](https://github.com/drogue-iot/drogue-device), but these will gradually be migrated to `embedded-update` when types and traits for interacting with device flash is more proven. A `Simulator` device is provided for testing.
 
 # Minimum supported Rust version (MSRV)
 
