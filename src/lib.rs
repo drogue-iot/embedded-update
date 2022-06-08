@@ -1,6 +1,5 @@
 //! Types for updating firmware of embedded devices from a remote server. The protocol is not
-//! tied to any specific platform but reference implementations are provided for Drogue Cloud
-//! and Eclipse Hawkbit.
+//! tied to any specific platform.
 #![no_std]
 #![feature(generic_associated_types)]
 #![feature(type_alias_impl_trait)]

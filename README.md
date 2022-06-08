@@ -9,13 +9,18 @@ The `embedded-update` crate implements a firmware update protocol for embedded d
 
 Both the device to be updated and the update service are pluggable, so the protocol can be used with any device or service that implements the provided traits. This means you can use the library directly on an embedded device, or on a gateway that proxies multiple devices.
 
-The library provides several update service reference implementations:
+The library provides an `InMemory` update service reference implementation, and a `Simulator` reference implementation for devices.
 
-* [`Drogue Cloud`](https://github.com/drogue-iot/drogue-ajour) that works with the Drogue IoT open source project.
-* [`Eclipse Hawkbit`](https://www.eclipse.org/hawkbit/) that works with the Eclipse Hawkbit DDI API.
-* `InMemory` for testing.
+Update service and device implementations can be added to `embedded-update` when types and traits for interacting with device flash and network connections are more widely available.
 
-Device side implementations can be found in [`Drogue Device`](https://github.com/drogue-iot/drogue-device), but these will gradually be migrated to `embedded-update` when types and traits for interacting with device flash is more proven. A `Simulator` device is provided for testing.
+## Supported update services
+
+An implementation for [`Drogue Cloud`](https://github.com/drogue-iot/drogue-ajour) can be found in [`Drogue Device`](https://github.com/drogue-iot/drogue-device).
+
+## Supported devices
+
+Device side implementations can be found in [`Drogue Device`](https://github.com/drogue-iot/drogue-device). 
+
 
 # Minimum supported Rust version (MSRV)
 
