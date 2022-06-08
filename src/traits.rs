@@ -1,6 +1,6 @@
+use crate::protocol::{Command, Status};
 use core::fmt::Debug;
 use core::future::Future;
-use drogue_ajour_protocol::{Command, Status};
 
 /// Trait for the firmware update service.
 ///

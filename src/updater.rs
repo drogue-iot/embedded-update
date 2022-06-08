@@ -1,5 +1,5 @@
+use crate::protocol::{Command, Status};
 use crate::traits::{FirmwareDevice, FirmwareVersion, UpdateService};
-use drogue_ajour_protocol::{Command, Status};
 use embedded_hal_async::delay::DelayUs;
 use futures::{
     future::{select, Either},
@@ -35,6 +35,23 @@ where
     next_version: Option<F>,
 }
 
+/// Configuration for the updater task.
+pub struct UpdaterConfig {
+    /// Timeout used for update requests in milliseconds.
+    pub timeout_ms: u32,
+    /// Backoff time when updates fail or time out.
+    pub backoff_ms: u32,
+}
+
+impl Default for UpdaterConfig {
+    fn default() -> Self {
+        Self {
+            timeout_ms: 15_000,
+            backoff_ms: 1_000,
+        }
+    }
+}
+
 /// The updater process that uses the update service to perform a firmware update check
 /// for a device. If the device needs to be updated, the updater will follow the update protocol
 pub struct FirmwareUpdater<T>
@@ -42,6 +59,8 @@ where
     T: UpdateService,
 {
     service: T,
+    timeout_ms: u32,
+    backoff_ms: u32,
 }
 
 impl<T> FirmwareUpdater<T>
@@ -49,8 +68,12 @@ where
     T: UpdateService,
 {
     /// Create a new instance of the updater with the provided service instance.
-    pub fn new(service: T) -> Self {
-        Self { service }
+    pub fn new(service: T, config: UpdaterConfig) -> Self {
+        Self {
+            service,
+            timeout_ms: config.timeout_ms,
+            backoff_ms: config.backoff_ms,
+        }
     }
 
     async fn check<F: FirmwareDevice, D: DelayUs>(
@@ -87,9 +110,9 @@ where
             debug!("Sending status: {:?}", status);
 
             let mut next_state = state.clone();
-            let mut poll_opt = None;
+            let mut poll_opt = Some(self.backoff_ms / 1000);
             {
-                let delay_fut = delay.delay_ms(15_000);
+                let delay_fut = delay.delay_ms(self.timeout_ms);
                 let cmd_fut = self.service.request(&status);
                 pin_mut!(delay_fut);
                 pin_mut!(cmd_fut);
@@ -199,6 +222,7 @@ mod tests {
     use crate::FirmwareUpdater;
     use crate::InMemory;
     use crate::Simulator;
+    use crate::UpdaterConfig;
 
     pub struct TokioDelay;
 
@@ -233,7 +257,13 @@ mod tests {
         let service = InMemory::new(b"1", &[1; 1024]);
         let mut device = Simulator::new(b"1");
 
-        let mut updater = FirmwareUpdater::new(service);
+        let mut updater = FirmwareUpdater::new(
+            service,
+            UpdaterConfig {
+                timeout_ms: 1_000,
+                backoff_ms: 0,
+            },
+        );
         let status = updater.run(&mut device, &mut TokioDelay).await.unwrap();
         assert_eq!(status, DeviceStatus::Synced);
     }
@@ -243,7 +273,13 @@ mod tests {
         let service = InMemory::new(b"2", &[1; 1024]);
         let mut device = Simulator::new(b"1");
 
-        let mut updater = FirmwareUpdater::new(service);
+        let mut updater = FirmwareUpdater::new(
+            service,
+            UpdaterConfig {
+                timeout_ms: 1_000,
+                backoff_ms: 0,
+            },
+        );
         let status = updater.run(&mut device, &mut TokioDelay).await.unwrap();
         assert_eq!(status, DeviceStatus::Updated);
     }

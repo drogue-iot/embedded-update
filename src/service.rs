@@ -1,6 +1,6 @@
+use crate::protocol::{Command, Status};
 use core::convert::Infallible;
 use core::future::Future;
-use drogue_ajour_protocol::{Command, Status};
 
 use crate::traits::UpdateService;
 
