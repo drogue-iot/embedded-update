@@ -37,6 +37,17 @@ impl<const N: usize> FirmwareVersion for heapless::Vec<u8, N> {
     }
 }
 
+#[cfg(feature = "std")]
+mod stdlib {
+    extern crate std;
+    use std::vec::Vec;
+    impl super::FirmwareVersion for Vec<u8> {
+        fn from_slice(data: &[u8]) -> Result<Self, ()> {
+            Ok(data.into())
+        }
+    }
+}
+
 /// The current status of the firmware on a device
 pub struct FirmwareStatus<VERSION>
 where
@@ -48,6 +59,19 @@ where
     pub next_offset: u32,
     /// Next version being written
     pub next_version: Option<VERSION>,
+}
+
+impl<VERSION> Clone for FirmwareStatus<VERSION>
+where
+    VERSION: FirmwareVersion + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            current_version: self.current_version.clone(),
+            next_offset: self.next_offset,
+            next_version: self.next_version.clone(),
+        }
+    }
 }
 
 pub trait FirmwareDevice {

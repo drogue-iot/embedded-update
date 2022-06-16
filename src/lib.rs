@@ -10,16 +10,10 @@ mod protocol;
 pub use protocol::*;
 
 #[cfg(feature = "nightly")]
-mod device;
+pub mod device;
 
 #[cfg(feature = "nightly")]
-pub use device::*;
-
-#[cfg(feature = "nightly")]
-mod service;
-
-#[cfg(feature = "nightly")]
-pub use service::*;
+pub mod service;
 
 #[cfg(feature = "nightly")]
 mod traits;

@@ -218,10 +218,10 @@ mod tests {
     use core::convert::Infallible;
     use core::future::Future;
 
+    use crate::device::Simulator;
+    use crate::service::InMemory;
     use crate::DeviceStatus;
     use crate::FirmwareUpdater;
-    use crate::InMemory;
-    use crate::Simulator;
     use crate::UpdaterConfig;
 
     pub struct TokioDelay;
