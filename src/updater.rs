@@ -126,7 +126,7 @@ where
                         }) => {
                             if offset == 0 {
                                 debug!(
-                                    "Updating device firmware from {} to {}",
+                                    "Updating device firmware from {:?} to {:?}",
                                     state.current_version,
                                     version.as_ref()
                                 );

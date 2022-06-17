@@ -14,6 +14,9 @@ impl Simulator {
             version: Vec::from_slice(version).unwrap(),
         }
     }
+    pub fn version(&self) -> &[u8] {
+        &self.version[..]
+    }
 }
 
 impl FirmwareDevice for Simulator {

@@ -33,7 +33,7 @@ impl<'a> UpdateService for InMemory<'a> {
                 ))
             } else if let Some(update) = &status.update {
                 if update.version == self.expected_version {
-                    if update.offset as usize == self.expected_firmware.len() {
+                    if update.offset as usize >= self.expected_firmware.len() {
                         // Update is finished, instruct device to swap
                         Ok(Command::new_swap(
                             self.expected_version,
@@ -43,7 +43,7 @@ impl<'a> UpdateService for InMemory<'a> {
                     } else {
                         // Continue updating
                         let data = self.expected_firmware;
-                        let mtu = status.mtu.unwrap_or(128) as usize;
+                        let mtu = status.mtu.unwrap_or(16) as usize;
                         let to_copy = core::cmp::min(mtu, data.len() - update.offset as usize);
                         let s = &data[update.offset as usize..update.offset as usize + to_copy];
                         Ok(Command::new_write(

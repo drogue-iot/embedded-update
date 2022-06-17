@@ -10,7 +10,7 @@ pub const FRAME_SIZE: usize = 1024;
 
 /// An update service based on a fixed-frame serial protocol, using `postcard` as the serialization format.
 /// Can be used with any transport implementing the embedded-io traits. (TCP, UDP, UART, USB).
-pub struct SerialUpdateService<T>
+pub struct Serial<T>
 where
     T: Read + Write,
 {
@@ -18,7 +18,7 @@ where
     buf: [u8; FRAME_SIZE],
 }
 
-impl<T> SerialUpdateService<T>
+impl<T> Serial<T>
 where
     T: Read + Write,
 {
@@ -36,7 +36,7 @@ pub enum SerialError<T, C> {
     Codec(C),
 }
 
-impl<T> UpdateService for SerialUpdateService<T>
+impl<T> UpdateService for Serial<T>
 where
     T: Read + Write,
 {
