@@ -8,7 +8,7 @@ use postcard::{from_bytes, to_slice};
 /// Defines a fixed frame protocol based on types
 const FRAME_SIZE: usize = 1024;
 
-/// An FirmwareDevice based on a fixed-frame serial protocol, using `postcard` as the serialization format.
+/// A FirmwareDevice based on a fixed-frame serial protocol, using `postcard` as the serialization format.
 /// Can be used with any transport implementing the embedded-io traits. (TCP, UDP, UART, USB).
 pub struct Serial<T>
 where
@@ -23,6 +23,7 @@ impl<T> Serial<T>
 where
     T: Read + Write,
 {
+    /// Create a Serial instance using the provided transport.
     pub fn new(transport: T) -> Self {
         Self {
             transport,
@@ -36,10 +37,14 @@ where
     }
 }
 
+/// Errors returned by Serial
 #[derive(Debug)]
 pub enum SerialError<T, C> {
+    /// An error from the underlying transport layer
     Transport(T),
+    /// An error during encode/decode of the status/command payload
     Codec(C),
+    /// Other internal error.
     Other,
 }
 
@@ -64,8 +69,7 @@ where
                 .map_err(|e| SerialError::Transport(e))?;
 
             let status: Status = from_bytes(&self.buf).map_err(|e| SerialError::Codec(e))?;
-            self.status.current_version =
-                Vec::from_slice(&status.version).map_err(|_| SerialError::Other)?;
+            self.status.current_version = Vec::from_slice(&status.version).map_err(|_| SerialError::Other)?;
             if let Some(update) = status.update {
                 self.status.next_offset = update.offset;
                 self.status
@@ -98,12 +102,7 @@ where
 
     fn write<'m>(&'m mut self, offset: u32, data: &'m [u8]) -> Self::WriteFuture<'m> {
         async move {
-            let command: Command = Command::new_write(
-                &self.status.next_version.as_ref().unwrap(),
-                offset,
-                data,
-                None,
-            );
+            let command: Command = Command::new_write(&self.status.next_version.as_ref().unwrap(), offset, data, None);
             to_slice(&command, &mut self.buf).map_err(|e| SerialError::Codec(e))?;
             let _ = self
                 .transport

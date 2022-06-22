@@ -9,11 +9,14 @@ pub struct Simulator {
 }
 
 impl Simulator {
+    /// Create a new instance of a simulated device with a given version.
     pub fn new(version: &[u8]) -> Self {
         Self {
             version: Vec::from_slice(version).unwrap(),
         }
     }
+
+    /// Return the current version of the device.
     pub fn version(&self) -> &[u8] {
         &self.version[..]
     }

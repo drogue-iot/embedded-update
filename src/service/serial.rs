@@ -22,6 +22,7 @@ impl<T> Serial<T>
 where
     T: Read + Write,
 {
+    /// Create an instance of a Serial update service over the provided transport.
     pub fn new(transport: T) -> Self {
         Self {
             transport,
@@ -30,9 +31,12 @@ where
     }
 }
 
+/// The error returned by the Serial update service.
 #[derive(Debug)]
 pub enum SerialError<T, C> {
+    /// An error in the underlying transport.
     Transport(T),
+    /// An error encoding/decoding the status or command.
     Codec(C),
 }
 

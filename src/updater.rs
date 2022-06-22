@@ -10,10 +10,13 @@ use futures::{
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error<D, S> {
-    Encode,
-    Decode,
+    /// Error decoding version.
+    DecodeVersion,
+    /// Error from delaying.
     Delay,
+    /// Error from firmware device.
     Device(D),
+    /// Error from the update service.
     Service(S),
 }
 
@@ -21,7 +24,9 @@ pub enum Error<D, S> {
 #[derive(PartialEq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum DeviceStatus {
-    Synced,
+    /// The device is fully with the update service. The preferred delay before running again may be provided.
+    Synced(Option<u32>),
+    /// The device firmware have been updated and the application should reset the device to start the next version of the application.
     Updated,
 }
 
@@ -80,7 +85,7 @@ where
         &mut self,
         device: &mut F,
         delay: &mut D,
-    ) -> Result<bool, Error<F::Error, T::Error>> {
+    ) -> Result<(bool, Option<u32>), Error<F::Error, T::Error>> {
         let mut state = {
             let initial = device.status().await.map_err(|e| Error::Device(e))?;
             UpdaterState {
@@ -130,10 +135,7 @@ where
                                     state.current_version,
                                     version.as_ref()
                                 );
-                                device
-                                    .start(version.as_ref())
-                                    .await
-                                    .map_err(|e| Error::Device(e))?;
+                                device.start(version.as_ref()).await.map_err(|e| Error::Device(e))?;
                             }
                             device
                                 .write(offset, data.as_ref())
@@ -141,10 +143,9 @@ where
                                 .map_err(|e| Error::Device(e))?;
 
                             next_state.next_offset += data.len() as u32;
-                            next_state.next_version.replace(
-                                F::Version::from_slice(version.as_ref())
-                                    .map_err(|_| Error::Decode)?,
-                            );
+                            next_state
+                                .next_version
+                                .replace(F::Version::from_slice(version.as_ref()).map_err(|_| Error::DecodeVersion)?);
                         }
                         Ok(Command::Sync {
                             version: _,
@@ -154,7 +155,7 @@ where
                             debug!("Device firmware is up to date");
                             device.synced().await.map_err(|e| Error::Device(e))?;
                             poll_opt = poll;
-                            return Ok(true);
+                            return Ok((true, poll_opt));
                         }
                         Ok(Command::Wait {
                             poll,
@@ -173,7 +174,7 @@ where
                                 .update(version.as_ref(), checksum.as_ref())
                                 .await
                                 .map_err(|e| Error::Device(e))?;
-                            return Ok(false);
+                            return Ok((false, None));
                         }
                         Err(e) => {
                             #[cfg(feature = "defmt")]
@@ -187,10 +188,7 @@ where
             }
             state = next_state;
             if let Some(poll) = poll_opt {
-                delay
-                    .delay_ms(poll * 1000)
-                    .await
-                    .map_err(|_| Error::Delay)?;
+                delay.delay_ms(poll * 1000).await.map_err(|_| Error::Delay)?;
             }
         }
     }
@@ -205,8 +203,9 @@ where
         device: &mut F,
         delay: &mut D,
     ) -> Result<DeviceStatus, Error<F::Error, T::Error>> {
-        if self.check(device, delay).await? {
-            Ok(DeviceStatus::Synced)
+        let (synced, wait) = self.check(device, delay).await?;
+        if synced {
+            Ok(DeviceStatus::Synced(wait))
         } else {
             Ok(DeviceStatus::Updated)
         }
@@ -265,7 +264,7 @@ mod tests {
             },
         );
         let status = updater.run(&mut device, &mut TokioDelay).await.unwrap();
-        assert_eq!(status, DeviceStatus::Synced);
+        assert_eq!(status, DeviceStatus::Synced(None));
     }
 
     #[tokio::test]

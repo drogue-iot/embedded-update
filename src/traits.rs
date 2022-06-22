@@ -23,11 +23,14 @@ pub trait UpdateService {
 /// Type representing the firmware version
 #[cfg(feature = "defmt")]
 pub trait FirmwareVersion: PartialEq + AsRef<[u8]> + Sized + Debug + Clone + defmt::Format {
+    /// Create an instance of the version based on a byte slice
     fn from_slice(data: &[u8]) -> Result<Self, ()>;
 }
 
+/// Type representing the firmware version
 #[cfg(not(feature = "defmt"))]
 pub trait FirmwareVersion: PartialEq + AsRef<[u8]> + Sized + Debug + Clone {
+    /// Create an instance of the version based on a byte slice
     fn from_slice(data: &[u8]) -> Result<Self, ()>;
 }
 
@@ -74,19 +77,25 @@ where
     }
 }
 
+/// Represents a device that can be updated by a `FirmwareUpdater`.
 pub trait FirmwareDevice {
+    /// The preferred block size to be passed in write.
     const MTU: usize;
+
+    /// The expected version type for this device.
     type Version: FirmwareVersion;
+
+    /// The error type.
     type Error;
 
-    // Future returned by status
+    /// Future returned by status
     type StatusFuture<'m>: Future<Output = Result<FirmwareStatus<Self::Version>, Self::Error>> + 'm
     where
         Self: 'm;
     /// Return the status of the currently running firmware.
     fn status(&mut self) -> Self::StatusFuture<'_>;
 
-    // Future returned by start
+    /// Future returned by start
     type StartFuture<'m>: Future<Output = Result<(), Self::Error>> + 'm
     where
         Self: 'm;

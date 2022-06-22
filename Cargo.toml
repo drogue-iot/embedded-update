@@ -1,9 +1,9 @@
 [package]
 name = "embedded-update"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 resolver = "2"
-description = "Firmware updates for embedded devices"
+description = "Firmware updates for embedded devices supporting multiple update services"
 documentation = "https://docs.rs/embedded-update"
 readme = "README.md"
 homepage = "https://drogue.io"

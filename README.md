@@ -9,7 +9,7 @@ The `embedded-update` crate implements a firmware update protocol for embedded d
 
 Both the device to be updated and the update service are pluggable, so the protocol can be used with any device or service that implements the provided traits. This means you can use the library directly on an embedded device, or on a gateway that proxies multiple devices.
 
-The library provides an `InMemory` update service reference implementation, and a `Simulator` reference implementation for devices.
+The library provides the `InMemory` and `Serial` reference implementations of the `UpdateService` trait, and the `Simulator` and `Serial` implementations for the `FirmwareDevice` trait.
 
 Update service and device implementations can be added to `embedded-update` when types and traits for interacting with device flash and network connections are more widely available.
 
@@ -20,7 +20,6 @@ An implementation for [`Drogue Cloud`](https://github.com/drogue-iot/drogue-ajou
 ## Supported devices
 
 Device side implementations can be found in [`Drogue Device`](https://github.com/drogue-iot/drogue-device). 
-
 
 # Minimum supported Rust version (MSRV)
 
