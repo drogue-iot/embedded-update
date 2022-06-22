@@ -154,7 +154,11 @@ where
                         }) => {
                             debug!("Device firmware is up to date");
                             device.synced().await.map_err(|e| Error::Device(e))?;
-                            poll_opt = poll;
+                            if let Some(poll) = poll {
+                                if poll > 0 {
+                                    poll_opt.replace(poll);
+                                }
+                            }
                             return Ok((true, poll_opt));
                         }
                         Ok(Command::Wait {
@@ -162,7 +166,11 @@ where
                             correlation_id: _,
                         }) => {
                             debug!("Instruction to wait for {:?} seconds", poll);
-                            poll_opt = poll;
+                            if let Some(poll) = poll {
+                                if poll > 0 {
+                                    poll_opt.replace(poll);
+                                }
+                            }
                         }
                         Ok(Command::Swap {
                             version,
@@ -260,11 +268,11 @@ mod tests {
             service,
             UpdaterConfig {
                 timeout_ms: 1_000,
-                backoff_ms: 0,
+                backoff_ms: 10000,
             },
         );
         let status = updater.run(&mut device, &mut TokioDelay).await.unwrap();
-        assert_eq!(status, DeviceStatus::Synced(None));
+        assert_eq!(status, DeviceStatus::Synced(Some(10)));
     }
 
     #[tokio::test]
