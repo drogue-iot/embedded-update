@@ -50,20 +50,16 @@ where
 
     fn request<'m>(&'m mut self, status: &'m Status<'m>) -> Self::RequestFuture<'m> {
         async move {
-            to_slice(&status, &mut self.buf).map_err(|e| SerialError::Codec(e))?;
-            let _ = self
-                .transport
-                .write(&self.buf)
-                .await
-                .map_err(|e| SerialError::Transport(e))?;
+            to_slice(&status, &mut self.buf).map_err(SerialError::Codec)?;
+            let _ = self.transport.write(&self.buf).await.map_err(SerialError::Transport)?;
 
             let _ = self
                 .transport
                 .read(&mut self.buf)
                 .await
-                .map_err(|e| SerialError::Transport(e))?;
+                .map_err(SerialError::Transport)?;
 
-            let c: Command = from_bytes(&self.buf).map_err(|e| SerialError::Codec(e))?;
+            let c: Command = from_bytes(&self.buf).map_err(SerialError::Codec)?;
             Ok(c)
         }
     }

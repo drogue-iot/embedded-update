@@ -31,6 +31,7 @@ pub trait FirmwareVersion: PartialEq + AsRef<[u8]> + Sized + Debug + Clone + def
 #[cfg(not(feature = "defmt"))]
 pub trait FirmwareVersion: PartialEq + AsRef<[u8]> + Sized + Debug + Clone {
     /// Create an instance of the version based on a byte slice
+    #[allow(clippy::result_unit_err)]
     fn from_slice(data: &[u8]) -> Result<Self, ()>;
 }
 
