@@ -29,3 +29,6 @@ jobs:
 
       - name: Test
         run: cargo test
+        env:
+          DROGUE_CLOUD_USER: ${{secrets.DROGUE_CLOUD_USER}}
+          DROGUE_CLOUD_PASSWORD: ${{secrets.DROGUE_CLOUD_PASSWORD}}
