@@ -75,7 +75,7 @@ where
     fn request<'m>(&'m mut self, status: &'m Status<'m>) -> Self::RequestFuture<'m> {
         async move {
             #[allow(unused_mut)]
-            let mut connection = self.client.connect(self.addr).await.map_err(|e| Error::Network(e))?;
+            let mut connection = self.client.connect(self.addr).await.map_err(Error::Network)?;
 
             #[cfg(feature = "tls")]
             let mut tls_buffer = [0; 6000];
@@ -90,7 +90,7 @@ where
                         &mut self.rng,
                     ))
                     .await
-                    .map_err(|e| Error::Tls(e))?;
+                    .map_err(Error::Tls)?;
                 connection
             };
             let mut client = HttpClient::new(&mut connection, self.host);
@@ -98,7 +98,7 @@ where
             let mut payload = [0; 64];
             let writer = serde_cbor::ser::SliceWrite::new(&mut payload[..]);
             let mut ser = serde_cbor::Serializer::new(writer).packed_format();
-            status.serialize(&mut ser).map_err(|e| Error::Codec(e))?;
+            status.serialize(&mut ser).map_err(Error::Codec)?;
             let writer = ser.into_inner();
             let size = writer.bytes_written();
             debug!("Status payload is {} bytes", size);
@@ -111,7 +111,7 @@ where
                 .build();
 
             let mut rx_buf = [0; MTU];
-            let response = client.request(request, &mut rx_buf).await.map_err(|e| Error::Http(e))?;
+            let response = client.request(request, &mut rx_buf).await.map_err(Error::Http)?;
 
             if response.status == ResponseStatus::Ok
                 || response.status == ResponseStatus::Accepted
@@ -120,7 +120,7 @@ where
                 if let Some(payload) = response.payload {
                     self.buf[..payload.len()].copy_from_slice(payload);
                     let command: Command<'m> =
-                        serde_cbor::de::from_mut_slice(&mut self.buf[..payload.len()]).map_err(|e| Error::Codec(e))?;
+                        serde_cbor::de::from_mut_slice(&mut self.buf[..payload.len()]).map_err(Error::Codec)?;
                     Ok(command)
                 } else {
                     Ok(Command::new_wait(Some(10), None))

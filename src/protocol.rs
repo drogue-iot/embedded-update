@@ -175,7 +175,7 @@ impl<'a, 'de: 'a> Deserialize<'de> for Bytes<'a> {
 
 impl<'a> AsRef<[u8]> for Bytes<'a> {
     fn as_ref(&self) -> &[u8] {
-        &self.data
+        self.data
     }
 }
 
@@ -183,7 +183,7 @@ impl<'a> Deref for Bytes<'a> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
-        &self.data
+        self.data
     }
 }
 

@@ -66,9 +66,9 @@ where
                 .transport
                 .read(&mut self.buf)
                 .await
-                .map_err(|e| SerialError::Transport(e))?;
+                .map_err(SerialError::Transport)?;
 
-            let status: Status = from_bytes(&self.buf).map_err(|e| SerialError::Codec(e))?;
+            let status: Status = from_bytes(&self.buf).map_err(SerialError::Codec)?;
             self.status.current_version = Vec::from_slice(&status.version).map_err(|_| SerialError::Other)?;
             if let Some(update) = status.update {
                 self.status.next_offset = update.offset;
@@ -102,13 +102,9 @@ where
 
     fn write<'m>(&'m mut self, offset: u32, data: &'m [u8]) -> Self::WriteFuture<'m> {
         async move {
-            let command: Command = Command::new_write(&self.status.next_version.as_ref().unwrap(), offset, data, None);
-            to_slice(&command, &mut self.buf).map_err(|e| SerialError::Codec(e))?;
-            let _ = self
-                .transport
-                .write(&self.buf)
-                .await
-                .map_err(|e| SerialError::Transport(e))?;
+            let command: Command = Command::new_write(self.status.next_version.as_ref().unwrap(), offset, data, None);
+            to_slice(&command, &mut self.buf).map_err(SerialError::Codec)?;
+            let _ = self.transport.write(&self.buf).await.map_err(SerialError::Transport)?;
             Ok(())
         }
     }
@@ -121,12 +117,8 @@ where
     fn update<'m>(&'m mut self, version: &'m [u8], checksum: &'m [u8]) -> Self::UpdateFuture<'m> {
         async move {
             let command: Command = Command::new_swap(version, checksum, None);
-            to_slice(&command, &mut self.buf).map_err(|e| SerialError::Codec(e))?;
-            let _ = self
-                .transport
-                .write(&self.buf)
-                .await
-                .map_err(|e| SerialError::Transport(e))?;
+            to_slice(&command, &mut self.buf).map_err(SerialError::Codec)?;
+            let _ = self.transport.write(&self.buf).await.map_err(SerialError::Transport)?;
             Ok(())
         }
     }
@@ -138,12 +130,8 @@ where
     fn synced(&mut self) -> Self::SyncedFuture<'_> {
         async move {
             let command: Command = Command::new_sync(&self.status.current_version, None, None);
-            to_slice(&command, &mut self.buf).map_err(|e| SerialError::Codec(e))?;
-            let _ = self
-                .transport
-                .write(&self.buf)
-                .await
-                .map_err(|e| SerialError::Transport(e))?;
+            to_slice(&command, &mut self.buf).map_err(SerialError::Codec)?;
+            let _ = self.transport.write(&self.buf).await.map_err(SerialError::Transport)?;
             Ok(())
         }
     }

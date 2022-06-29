@@ -87,7 +87,7 @@ where
         delay: &mut D,
     ) -> Result<(bool, Option<u32>), Error<F::Error, T::Error>> {
         let mut state = {
-            let initial = device.status().await.map_err(|e| Error::Device(e))?;
+            let initial = device.status().await.map_err(Error::Device)?;
             UpdaterState {
                 current_version: initial.current_version,
                 next_offset: initial.next_offset,
@@ -121,6 +121,7 @@ where
                 let cmd_fut = self.service.request(&status);
                 pin_mut!(delay_fut);
                 pin_mut!(cmd_fut);
+                #[allow(clippy::single_match)]
                 match select(delay_fut, cmd_fut).await {
                     Either::Right((cmd, _)) => match cmd {
                         Ok(Command::Write {
@@ -135,12 +136,9 @@ where
                                     state.current_version,
                                     version.as_ref()
                                 );
-                                device.start(version.as_ref()).await.map_err(|e| Error::Device(e))?;
+                                device.start(version.as_ref()).await.map_err(Error::Device)?;
                             }
-                            device
-                                .write(offset, data.as_ref())
-                                .await
-                                .map_err(|e| Error::Device(e))?;
+                            device.write(offset, data.as_ref()).await.map_err(Error::Device)?;
 
                             next_state.next_offset += data.len() as u32;
                             next_state
@@ -153,7 +151,7 @@ where
                             correlation_id: _,
                         }) => {
                             debug!("Device firmware is up to date");
-                            device.synced().await.map_err(|e| Error::Device(e))?;
+                            device.synced().await.map_err(Error::Device)?;
                             if let Some(poll) = poll {
                                 if poll > 0 {
                                     poll_opt.replace(poll);
@@ -181,7 +179,7 @@ where
                             device
                                 .update(version.as_ref(), checksum.as_ref())
                                 .await
-                                .map_err(|e| Error::Device(e))?;
+                                .map_err(Error::Device)?;
                             return Ok((false, None));
                         }
                         Err(e) => {
