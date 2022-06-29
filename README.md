@@ -16,7 +16,6 @@ Update service and device implementations can be added to `embedded-update` when
 ## Supported update services
 
 * [`Drogue Cloud`](https://github.com/drogue-iot/drogue-ajour) by enabling the `drogue` feature.
-* [`Eclipse Hawkbit`](https://www.eclipse.org/hawkbit/) by enabling the `hawkbit` feature.
 
 ## Supported devices
 
