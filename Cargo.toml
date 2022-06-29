@@ -29,6 +29,7 @@ reqwless = { version = "0.1", optional = true }
 embedded-nal-async = { version = "0.1.0", git = "https://github.com/lulf/embedded-nal.git", rev = "7e46d533090882ce9a449f544055c09e6d241e55", optional = true }
 rand_core = { version = "0.6", default-features = false, optional = true }
 serde_cbor = { version = "0.11", default-features = false, optional = true }
+serde-json-core = { version = "0.4", default-features = false, optional = true }
 embedded-tls = { version = "0.8.0", default-features = false, features = ["async"], optional = true }
 
 [dev-dependencies]
@@ -40,9 +41,10 @@ log = "0.4"
 rand = "0.8"
 
 [features]
-default = ["nightly", "drogue", "tls"]
+default = ["nightly", "drogue", "tls", "hawkbit"]
 nightly = ["embedded-hal-async", "futures", "postcard", "embedded-io"]
 defmt = ["dep:defmt"]
 drogue = ["reqwless", "embedded-nal-async", "rand_core", "serde_cbor"]
+hawkbit = ["reqwless", "embedded-nal-async", "rand_core", "serde-json-core"]
 tls = ["embedded-tls"]
 std = []
