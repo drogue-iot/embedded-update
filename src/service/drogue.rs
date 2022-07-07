@@ -1,6 +1,6 @@
 use crate::{Command, Status, UpdateService};
 use core::future::Future;
-use embedded_nal_async::{SocketAddr, TcpClient};
+use embedded_nal_async::{SocketAddr, TcpClientSocket};
 use rand_core::{CryptoRng, RngCore};
 use reqwless::{
     client::{Error as HttpError, HttpClient},
@@ -14,7 +14,7 @@ use embedded_tls::*;
 /// An update service implementation for the Drogue Cloud update service.
 pub struct DrogueHttp<'a, T, RNG, const MTU: usize>
 where
-    T: TcpClient + 'a,
+    T: TcpClientSocket + 'a,
     RNG: RngCore + CryptoRng + 'a,
 {
     client: T,
@@ -28,7 +28,7 @@ where
 
 impl<'a, T, RNG, const MTU: usize> DrogueHttp<'a, T, RNG, MTU>
 where
-    T: TcpClient + 'a,
+    T: TcpClientSocket + 'a,
     RNG: RngCore + CryptoRng + 'a,
 {
     /// Construct a new Drogue update service
@@ -62,7 +62,7 @@ pub enum Error<N, H, S, T> {
 
 impl<'a, T, RNG, const MTU: usize> UpdateService for DrogueHttp<'a, T, RNG, MTU>
 where
-    T: TcpClient + 'a,
+    T: TcpClientSocket + 'a,
     RNG: RngCore + CryptoRng + 'a,
 {
     #[cfg(feature = "tls")]
@@ -75,7 +75,8 @@ where
     fn request<'m>(&'m mut self, status: &'m Status<'m>) -> Self::RequestFuture<'m> {
         async move {
             #[allow(unused_mut)]
-            let mut connection = self.client.connect(self.addr).await.map_err(Error::Network)?;
+            let connection = &mut self.client;
+            connection.connect(self.addr).await.map_err(Error::Network)?;
 
             #[cfg(feature = "tls")]
             let mut tls_buffer = [0; 6000];
