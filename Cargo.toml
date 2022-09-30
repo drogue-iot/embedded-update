@@ -1,6 +1,6 @@
 [package]
 name = "embedded-update"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 resolver = "2"
 description = "Firmware updates for embedded devices supporting multiple update services"
@@ -23,7 +23,7 @@ embedded-io = { version = "0.3.0", default-features = false, features = ["async"
 
 defmt = { version = "0.3", optional = true }
 log = { version = "0.4", optional = true }
-embedded-hal-async = {version = "0.1.0-alpha.1", optional = true }
+embedded-hal-async = {version = "=0.1.0-alpha.2", optional = true }
 futures = { version =  "0.3", default-features = false, optional = true }
 reqwless = { version = "0.1", optional = true }
 embedded-nal-async = { version = "0.2.0", optional = true }

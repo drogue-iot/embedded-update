@@ -1,4 +1,3 @@
-#![cfg_attr(feature = "nightly", feature(generic_associated_types))]
 #![cfg_attr(feature = "nightly", feature(type_alias_impl_trait))]
 
 use core::future::Future;
