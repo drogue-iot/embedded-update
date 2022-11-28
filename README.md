@@ -15,11 +15,17 @@ Update service and device implementations can be added to `embedded-update` when
 
 ## Supported update services
 
-* [`Drogue Cloud`](https://github.com/drogue-iot/drogue-ajour) by enabling the `drogue` feature.
+* `Serial` - implements a serial update protocol for a device, that can be used over UART, USB Serial etc.
+* `InMemory` - implements a hard coded update service that serves an update from memory.
+
+See [drogue-device](https://github.com/drogue-iot/drogue-device) for additional update service implementations.
 
 ## Supported devices
 
-Device side implementations can be found in [`Drogue Device`](https://github.com/drogue-iot/drogue-device). 
+* `Serial` - implements a serial update protocol allowing to talk to a device implementing this protocol over UART, USB Serial etc.
+* `Simulated` - implements a simulated device for testing update services.
+
+See [drogue-device](https://github.com/drogue-iot/drogue-device) for additional device implementations.
 
 # Minimum supported Rust version (MSRV)
 
