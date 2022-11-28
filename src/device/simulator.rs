@@ -1,7 +1,8 @@
-use crate::traits::{FirmwareDevice, FirmwareStatus};
-use core::convert::Infallible;
-use core::future::Future;
-use heapless::Vec;
+use {
+    crate::traits::{FirmwareDevice, FirmwareStatus},
+    core::convert::Infallible,
+    heapless::Vec,
+};
 
 /// A simulated device which implements the `FirmwareDevice` trait.
 pub struct Simulator {
@@ -27,58 +28,33 @@ impl FirmwareDevice for Simulator {
     type Version = Vec<u8, 16>;
     type Error = Infallible;
 
-    type StatusFuture<'m> = impl Future<Output = Result<FirmwareStatus<Self::Version>, Self::Error>> + 'm
-    where
-        Self: 'm;
-    fn status(&mut self) -> Self::StatusFuture<'_> {
-        async move {
-            debug!("Simulator::status()");
-            Ok(FirmwareStatus {
-                current_version: self.version.clone(),
-                next_offset: 0,
-                next_version: None,
-            })
-        }
+    async fn status(&mut self) -> Result<FirmwareStatus<Self::Version>, Self::Error> {
+        debug!("Simulator::status()");
+        Ok(FirmwareStatus {
+            current_version: self.version.clone(),
+            next_offset: 0,
+            next_version: None,
+        })
     }
 
-    type StartFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
-    fn start<'m>(&'m mut self, _: &'m [u8]) -> Self::StartFuture<'m> {
-        async move {
-            debug!("Simulator::start()");
-            Ok(())
-        }
+    async fn start(&mut self, _version: &[u8]) -> Result<(), Self::Error> {
+        debug!("Simulator::start()");
+        Ok(())
     }
 
-    type WriteFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
-    fn write<'m>(&'m mut self, _: u32, _: &'m [u8]) -> Self::WriteFuture<'m> {
-        async move {
-            debug!("Simulator::write()");
-            Ok(())
-        }
+    async fn write(&mut self, _offset: u32, _data: &[u8]) -> Result<(), Self::Error> {
+        debug!("Simulator::write()");
+        Ok(())
     }
 
-    type UpdateFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
-    fn update<'m>(&'m mut self, version: &'m [u8], _: &'m [u8]) -> Self::UpdateFuture<'m> {
-        async move {
-            debug!("Simulator::update()");
-            self.version = Vec::from_slice(version).unwrap();
-            Ok(())
-        }
+    async fn update(&mut self, version: &[u8], _checksum: &[u8]) -> Result<(), Self::Error> {
+        debug!("Simulator::update()");
+        self.version = Vec::from_slice(version).unwrap();
+        Ok(())
     }
 
-    type SyncedFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
-    fn synced(&mut self) -> Self::SyncedFuture<'_> {
-        async move {
-            debug!("Simulator::synced()");
-            Ok(())
-        }
+    async fn synced(&mut self) -> Result<(), Self::Error> {
+        debug!("Simulator::synced()");
+        Ok(())
     }
 }

@@ -1,8 +1,11 @@
 #![cfg_attr(feature = "nightly", feature(type_alias_impl_trait))]
+#![cfg_attr(feature = "nightly", feature(async_fn_in_trait))]
+#![cfg_attr(feature = "nightly", allow(incomplete_features))]
 
-use core::future::Future;
-use embedded_update::{device, service, FirmwareUpdater};
-use tokio::sync::mpsc;
+use {
+    embedded_update::{device, service, FirmwareUpdater},
+    tokio::sync::mpsc,
+};
 
 #[tokio::test]
 async fn test_serial_chain() {
@@ -58,45 +61,29 @@ impl embedded_io::Io for Link {
 }
 
 impl embedded_io::asynch::Read for Link {
-    type ReadFuture<'a> = impl Future<Output = Result<usize, Self::Error>> + 'a
-    where
-        Self: 'a;
-
-    fn read<'a>(&'a mut self, buf: &'a mut [u8]) -> Self::ReadFuture<'a> {
-        async move {
-            if let Some(m) = self.rx.recv().await {
-                let to_copy = core::cmp::min(m.len(), buf.len());
-                buf[..to_copy].copy_from_slice(&m[..to_copy]);
-                Ok(to_copy)
-            } else {
-                Ok(0)
-            }
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        if let Some(m) = self.rx.recv().await {
+            let to_copy = core::cmp::min(m.len(), buf.len());
+            buf[..to_copy].copy_from_slice(&m[..to_copy]);
+            Ok(to_copy)
+        } else {
+            Ok(0)
         }
     }
 }
 
 impl embedded_io::asynch::Write for Link {
-    type WriteFuture<'a> = impl Future<Output = Result<usize, Self::Error>> + 'a
-    where
-        Self: 'a;
-
-    fn write<'a>(&'a mut self, buf: &'a [u8]) -> Self::WriteFuture<'a> {
-        async move {
-            for chunk in buf.chunks(1024) {
-                let mut b = [0; 1024];
-                b[..chunk.len()].copy_from_slice(chunk);
-                self.tx.send(b).await.unwrap();
-            }
-            Ok(buf.len())
+    async fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        for chunk in buf.chunks(1024) {
+            let mut b = [0; 1024];
+            b[..chunk.len()].copy_from_slice(chunk);
+            self.tx.send(b).await.unwrap();
         }
+        Ok(buf.len())
     }
 
-    type FlushFuture<'a> = impl Future<Output = Result<(), Self::Error>> + 'a
-    where
-        Self: 'a;
-
-    fn flush<'a>(&'a mut self) -> Self::FlushFuture<'a> {
-        async move { todo!() }
+    async fn flush(&mut self) -> Result<(), Self::Error> {
+        todo!()
     }
 }
 
@@ -104,19 +91,14 @@ pub struct Timer;
 
 impl embedded_hal_async::delay::DelayUs for Timer {
     type Error = core::convert::Infallible;
-    type DelayUsFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm where Self: 'm;
-    fn delay_us(&mut self, i: u32) -> Self::DelayUsFuture<'_> {
-        async move {
-            tokio::time::sleep(tokio::time::Duration::from_micros(i as u64)).await;
-            Ok(())
-        }
+
+    async fn delay_us(&mut self, i: u32) -> Result<(), Self::Error> {
+        tokio::time::sleep(tokio::time::Duration::from_micros(i as u64)).await;
+        Ok(())
     }
 
-    type DelayMsFuture<'m> = impl Future<Output = Result<(), Self::Error>> + 'm where Self: 'm;
-    fn delay_ms(&mut self, i: u32) -> Self::DelayMsFuture<'_> {
-        async move {
-            tokio::time::sleep(tokio::time::Duration::from_millis(i as u64)).await;
-            Ok(())
-        }
+    async fn delay_ms(&mut self, i: u32) -> Result<(), Self::Error> {
+        tokio::time::sleep(tokio::time::Duration::from_millis(i as u64)).await;
+        Ok(())
     }
 }

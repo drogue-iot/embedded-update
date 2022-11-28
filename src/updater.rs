@@ -1,9 +1,13 @@
-use crate::protocol::{Command, Status};
-use crate::traits::{FirmwareDevice, FirmwareVersion, UpdateService};
-use embedded_hal_async::delay::DelayUs;
-use futures::{
-    future::{select, Either},
-    pin_mut,
+use {
+    crate::{
+        protocol::{Command, Status},
+        traits::{FirmwareDevice, FirmwareVersion, UpdateService},
+    },
+    embedded_hal_async::delay::DelayUs,
+    futures::{
+        future::{select, Either},
+        pin_mut,
+    },
 };
 
 /// The error types that the updater may return during the update process.
@@ -220,40 +224,21 @@ where
 
 #[cfg(test)]
 mod tests {
-    use core::convert::Infallible;
-    use core::future::Future;
-
-    use crate::device::Simulator;
-    use crate::service::InMemory;
-    use crate::DeviceStatus;
-    use crate::FirmwareUpdater;
-    use crate::UpdaterConfig;
+    use crate::{device::Simulator, service::InMemory, DeviceStatus, FirmwareUpdater, UpdaterConfig};
 
     pub struct TokioDelay;
 
     impl embedded_hal_async::delay::DelayUs for TokioDelay {
-        type Error = Infallible;
+        type Error = core::convert::Infallible;
 
-        type DelayUsFuture<'a> = impl Future<Output = Result<(), Self::Error>>
-        where
-            Self: 'a;
-
-        fn delay_us(&mut self, us: u32) -> Self::DelayUsFuture<'_> {
-            async move {
-                tokio::time::sleep(tokio::time::Duration::from_micros(us as u64)).await;
-                Ok(())
-            }
+        async fn delay_us(&mut self, i: u32) -> Result<(), Self::Error> {
+            tokio::time::sleep(tokio::time::Duration::from_micros(i as u64)).await;
+            Ok(())
         }
 
-        type DelayMsFuture<'a> = impl Future<Output = Result<(), Self::Error>>
-        where
-            Self: 'a;
-
-        fn delay_ms(&mut self, ms: u32) -> Self::DelayMsFuture<'_> {
-            async move {
-                tokio::time::sleep(tokio::time::Duration::from_millis(ms as u64)).await;
-                Ok(())
-            }
+        async fn delay_ms(&mut self, i: u32) -> Result<(), Self::Error> {
+            tokio::time::sleep(tokio::time::Duration::from_millis(i as u64)).await;
+            Ok(())
         }
     }
 

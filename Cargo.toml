@@ -19,30 +19,25 @@ exclude = [".github"]
 heapless = "0.7"
 serde = { version = "1", features = ["derive"], default-features = false }
 postcard = { version = "1.0", default-features = false, optional = true }
-embedded-io = { version = "0.3.1", default-features = false, features = ["async"], optional = true }
+embedded-io = { version = "0.4.0", default-features = false, features = ["async"], optional = true }
 
 defmt = { version = "0.3", optional = true }
 log = { version = "0.4", optional = true }
-embedded-hal-async = {version = "=0.1.0-alpha.3", optional = true }
+embedded-hal-async = {version = "=0.2.0-alpha.0", optional = true }
 futures = { version =  "0.3", default-features = false, optional = true }
-reqwless = { version = "0.1", optional = true }
-embedded-nal-async = { version = "0.2.0", optional = true }
 rand_core = { version = "0.6", default-features = false, optional = true }
 serde_cbor = { version = "0.11", default-features = false, optional = true }
-embedded-tls = { version = "0.9.0", default-features = false, features = ["async"], optional = true }
 
 [dev-dependencies]
 env_logger = "0.9"
 tokio = { version = "1", features = ["full"] }
 serde_cbor = { version = "0.11", features = ["std"] }
-embedded-io = { version = "0.3.0", default-features = false, features = ["async", "std", "tokio", "log"] }
+embedded-io = { version = "0.4.0", default-features = false, features = ["async", "std", "tokio", "log"] }
 log = "0.4"
 rand = "0.8"
 
 [features]
-default = ["nightly", "drogue", "tls"]
+default = ["nightly"]
 nightly = ["embedded-hal-async", "futures", "postcard", "embedded-io"]
 defmt = ["dep:defmt"]
-drogue = ["reqwless", "embedded-nal-async", "rand_core", "serde_cbor"]
-tls = ["embedded-tls"]
 std = []
