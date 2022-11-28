@@ -1,6 +1,7 @@
-use crate::protocol::{Command, Status};
-use core::fmt::Debug;
-use core::future::Future;
+use {
+    crate::protocol::{Command, Status},
+    core::fmt::Debug,
+};
 
 /// Trait for the firmware update service.
 ///
@@ -10,14 +11,9 @@ pub trait UpdateService {
     /// Error type
     type Error: core::fmt::Debug;
 
-    /// Future returned by send
-    type RequestFuture<'m>: Future<Output = Result<Command<'m>, Self::Error>> + 'm
-    where
-        Self: 'm;
-
     /// Send the status to the server, and return the Command responded by the service
     /// rx buffer.
-    fn request<'m>(&'m mut self, status: &'m Status<'m>) -> Self::RequestFuture<'m>;
+    async fn request<'m>(&'m mut self, status: &'m Status<'m>) -> Result<Command<'m>, Self::Error>;
 }
 
 /// Type representing the firmware version
@@ -89,38 +85,18 @@ pub trait FirmwareDevice {
     /// The error type.
     type Error;
 
-    /// Future returned by status
-    type StatusFuture<'m>: Future<Output = Result<FirmwareStatus<Self::Version>, Self::Error>> + 'm
-    where
-        Self: 'm;
     /// Return the status of the currently running firmware.
-    fn status(&mut self) -> Self::StatusFuture<'_>;
+    async fn status(&mut self) -> Result<FirmwareStatus<Self::Version>, Self::Error>;
 
-    /// Future returned by start
-    type StartFuture<'m>: Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
     /// Prepare for starting the firmware update process.
-    fn start<'m>(&'m mut self, version: &'m [u8]) -> Self::StartFuture<'m>;
+    async fn start(&mut self, version: &[u8]) -> Result<(), Self::Error>;
 
-    /// Future returned by write
-    type WriteFuture<'m>: Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
     /// Write a block of firmware at the expected offset.
-    fn write<'m>(&'m mut self, offset: u32, data: &'m [u8]) -> Self::WriteFuture<'m>;
+    async fn write(&mut self, offset: u32, data: &[u8]) -> Result<(), Self::Error>;
 
-    /// Future returned by update
-    type UpdateFuture<'m>: Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
     /// Finish the firmware write and mark device to be updated
-    fn update<'m>(&'m mut self, version: &'m [u8], checksum: &'m [u8]) -> Self::UpdateFuture<'m>;
+    async fn update(&mut self, version: &[u8], checksum: &[u8]) -> Result<(), Self::Error>;
 
-    /// Future returned by synced
-    type SyncedFuture<'m>: Future<Output = Result<(), Self::Error>> + 'm
-    where
-        Self: 'm;
     /// Mark firmware as being in sync with the expected
-    fn synced(&mut self) -> Self::SyncedFuture<'_>;
+    async fn synced(&mut self) -> Result<(), Self::Error>;
 }
