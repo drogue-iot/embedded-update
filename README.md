@@ -29,9 +29,7 @@ See [drogue-device](https://github.com/drogue-iot/drogue-device) for additional 
 
 # Minimum supported Rust version (MSRV)
 
-`embedded-update` requires two features from `nightly` to compile:
+`embedded-update` requires two features from `nightly` to compile when using the `nightly` flag.
 
-* `generic_associated_types`
-* `type_alias_impl_trait`
-
-These features are complete, but are not yet merged to `stable`.
+* async_fn_in_traits
+* impl_trait_projections

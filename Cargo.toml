@@ -1,6 +1,6 @@
 [package]
 name = "embedded-update"
-version = "0.9.1"
+version = "0.10.0"
 edition = "2021"
 resolver = "2"
 description = "Firmware updates for embedded devices supporting multiple update services"
