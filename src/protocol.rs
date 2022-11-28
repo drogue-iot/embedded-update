@@ -1,7 +1,11 @@
-use core::cmp::Ordering;
-use core::hash::{Hash, Hasher};
-use core::ops::Deref;
-use serde::{de::Visitor, Deserialize, Serialize};
+use {
+    core::{
+        cmp::Ordering,
+        hash::{Hash, Hasher},
+        ops::Deref,
+    },
+    serde::{de::Visitor, Deserialize, Serialize},
+};
 
 /// Represents the current state of firmware and firmware being written on a device.
 #[derive(Serialize, Deserialize, Debug)]
@@ -237,9 +241,10 @@ impl<'de> Visitor<'de> for BytesVisitor {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use super::*;
-    use std::println;
-    use std::vec::Vec;
+    use {
+        super::*,
+        std::{println, vec::Vec},
+    };
 
     #[test]
     fn deserialize_ref() {
