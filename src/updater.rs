@@ -198,7 +198,7 @@ where
             }
             state = next_state;
             if let Some(poll) = poll_opt {
-                delay.delay_ms(poll * 1000).await.map_err(|_| Error::Delay)?;
+                delay.delay_ms(poll * 1000).await;
             }
         }
     }
@@ -229,16 +229,12 @@ mod tests {
     pub struct TokioDelay;
 
     impl embedded_hal_async::delay::DelayUs for TokioDelay {
-        type Error = core::convert::Infallible;
-
-        async fn delay_us(&mut self, i: u32) -> Result<(), Self::Error> {
+        async fn delay_us(&mut self, i: u32) {
             tokio::time::sleep(tokio::time::Duration::from_micros(i as u64)).await;
-            Ok(())
         }
 
-        async fn delay_ms(&mut self, i: u32) -> Result<(), Self::Error> {
+        async fn delay_ms(&mut self, i: u32) {
             tokio::time::sleep(tokio::time::Duration::from_millis(i as u64)).await;
-            Ok(())
         }
     }
 

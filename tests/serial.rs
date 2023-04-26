@@ -90,15 +90,11 @@ impl embedded_io::asynch::Write for Link {
 pub struct Timer;
 
 impl embedded_hal_async::delay::DelayUs for Timer {
-    type Error = core::convert::Infallible;
-
-    async fn delay_us(&mut self, i: u32) -> Result<(), Self::Error> {
+    async fn delay_us(&mut self, i: u32) {
         tokio::time::sleep(tokio::time::Duration::from_micros(i as u64)).await;
-        Ok(())
     }
 
-    async fn delay_ms(&mut self, i: u32) -> Result<(), Self::Error> {
+    async fn delay_ms(&mut self, i: u32) {
         tokio::time::sleep(tokio::time::Duration::from_millis(i as u64)).await;
-        Ok(())
     }
 }
