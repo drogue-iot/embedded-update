@@ -3,7 +3,7 @@ use {
         protocol::*,
         traits::{FirmwareDevice, FirmwareStatus},
     },
-    embedded_io::asynch::{Read, Write},
+    embedded_io_async::{Read, Write},
     heapless::Vec,
     postcard::{from_bytes, to_slice},
 };

@@ -56,11 +56,11 @@ impl Link {
     }
 }
 
-impl embedded_io::Io for Link {
+impl embedded_io::ErrorType for Link {
     type Error = std::io::Error;
 }
 
-impl embedded_io::asynch::Read for Link {
+impl embedded_io_async::Read for Link {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
         if let Some(m) = self.rx.recv().await {
             let to_copy = core::cmp::min(m.len(), buf.len());
@@ -72,7 +72,7 @@ impl embedded_io::asynch::Read for Link {
     }
 }
 
-impl embedded_io::asynch::Write for Link {
+impl embedded_io_async::Write for Link {
     async fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         for chunk in buf.chunks(1024) {
             let mut b = [0; 1024];

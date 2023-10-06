@@ -1,5 +1,5 @@
 use {
-    embedded_io::asynch::{Read, Write},
+    embedded_io_async::{Read, Write},
     postcard::{from_bytes, to_slice},
 };
 
